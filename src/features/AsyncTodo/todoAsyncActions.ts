@@ -34,16 +34,58 @@ export const createTodo = createAsyncThunk(
       completed: false,
     };
 
-    const responce = await fetch(
-      "https://jsonplaceholder.typicode.com/todos?_limit=10",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newTodo),
-      }
-    );
+    const responce = await fetch("https://jsonplaceholder.typicode.com/todos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newTodo),
+    });
     return (await responce.json()) as Todo;
   }
 );
+
+export const removeTodo = createAsyncThunk<
+  Todo["id"],
+  Todo["id"],
+  { rejectValue: string }
+>("todo/removeTodo", async (id: Todo["id"], { rejectWithValue }) => {
+  const responce = await fetch(
+    "https://jsonplaceholder.typicode.com/todos/" + id,
+    {
+      method: "DELETE",
+    }
+  );
+  if (!responce.ok) {
+    return rejectWithValue("Failed delete todo with id" + id);
+  }
+  return id;
+});
+
+export const toggleTodo = createAsyncThunk<
+  Todo,
+  Todo["id"],
+  { state: { asyncTodos: TodoSlice }; rejectValue: string }
+>("todo/toggle", async (id, { getState, rejectWithValue }) => {
+  const todo = getState().asyncTodos.list.find((el) => el.id === id);
+
+  if (todo) {
+    const responce = await fetch(
+      "https://jsonplaceholder.typicode.com/todos/" + id,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          completed: !todo.completed,
+        }),
+      }
+    );
+    if (!responce.ok) {
+      return rejectWithValue("Failed update todo with id" + id);
+    }
+    return await responce.json();
+  }
+  return rejectWithValue("No such todo with id" + id);
+});
